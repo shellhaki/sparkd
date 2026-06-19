@@ -27,11 +27,19 @@ Build on a VPS:
 
 ```bash
 ssh user@server-ip
-git clone <sparkd-repo-url>
+git clone https://github.com/shellhaki/sparkd.git
 cd sparkd
 go build -o sparkd .
 sudo ./sparkd daemon
 ```
+
+One-command systemd install on a VPS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shellhaki/sparkd/main/scripts/install-systemd.sh | sudo sh
+```
+
+The installer clones `https://github.com/shellhaki/sparkd.git`, builds SparkD, starts `sparkd.service`, and prints the useful `systemctl` and `journalctl` commands.
 
 ## Run
 
@@ -60,6 +68,12 @@ sudo SPARKD_HOST=db.example.com ./sparkd daemon
 Open the daemon port on your VPS firewall/security group. For quick local-only testing, run with `SPARKD_ADDR=127.0.0.1:8721`.
 
 ## systemd
+
+Use the installer:
+
+```bash
+sudo sh scripts/install-systemd.sh
+```
 
 Example unit:
 

@@ -1,7 +1,7 @@
 {
-  "name": "manual-pg",
+  "name": "tesfft-pg",
   "dbtype": "pg",
-  "port": 3001,
+  "port": 3033,
   "ram": "128mb",
   "disk": "512mb"
 }
