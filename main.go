@@ -1,56 +1,62 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
+
 	"shellhaki/sparkd/internals"
-	"syscall"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: sudo ./main <container-name>")
-		os.Exit(1)
-	}
-	name := os.Args[1]
-	internals.EnsureBaseRootFs()
-	internals.EnsureContainerDir()
-	containerPath := internals.CreateContainer(name)
-
-	rPipe, wPipe, err := os.Pipe()
-	internals.Must(err)
-
-	cmd := exec.Command("/proc/self/exe", "child", containerPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWUTS |
-			syscall.CLONE_NEWNS |
-			syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWNET,
+	if len(os.Args) > 1 && os.Args[1] == "cell-child" {
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "sparkd cell-child requires a rootfs path")
+			os.Exit(2)
+		}
+		if err := internals.RunCellChild(os.Args[2]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
 	}
 
-	cmd.ExtraFiles = []*os.File{rPipe}
+	cfg := internals.LoadConfig()
 
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	command := "daemon"
+	if len(os.Args) > 1 {
+		command = os.Args[1]
+	}
 
-	internals.Must(cmd.Start())
-
-	rPipe.Close()
-
-	pid := cmd.Process.Pid
-	internals.SetupNetwork(pid, name)
-
-	wPipe.Close()
-
-	internals.Must(cmd.Wait())
-}
-
-func init() {
-	if len(os.Args) > 1 && os.Args[1] == "child" {
-		internals.ContainerChild(os.Args[2])
-		os.Exit(0)
+	switch command {
+	case "daemon":
+		daemon, err := internals.NewDaemon(cfg)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if err := daemon.ListenAndServe(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	case "import":
+		progress := internals.NewProgressLog()
+		if err := internals.EnsureBaseRootFS(cfg, progress); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if err := internals.ImportDatabase(cfg, "pg", progress); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		_ = json.NewEncoder(os.Stdout).Encode(map[string]any{
+			"status":   "ok",
+			"progress": progress.Events(),
+		})
+	default:
+		fmt.Fprintln(os.Stderr, "Usage:")
+		fmt.Fprintln(os.Stderr, "  sudo ./main daemon")
+		fmt.Fprintln(os.Stderr, "  sudo ./main import")
+		os.Exit(2)
 	}
 }

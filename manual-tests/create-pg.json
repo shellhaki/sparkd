@@ -1,0 +1,7 @@
+{
+  "name": "manual-pg",
+  "dbtype": "pg",
+  "port": 3001,
+  "ram": "128mb",
+  "disk": "512mb"
+}
