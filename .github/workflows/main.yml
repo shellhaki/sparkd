@@ -11,8 +11,11 @@ jobs:
     name: test the pipeline
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.26.4'
+
 
       - name: Print message
         run: echo "Pipeline is working"
@@ -35,8 +38,8 @@ jobs:
     needs: TEST
     steps:
       # set up go
-      - name: set up go
-        uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: '1.26.4'
 
