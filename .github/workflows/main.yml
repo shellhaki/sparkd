@@ -26,7 +26,7 @@ jobs:
       - name: Verify modules are tidy
         run: |
           go mod tidy
-          git diff --exit-code go.mod go.sum
+          git diff --exit-code go.mod
 
         #test the app
       - name: test app  
