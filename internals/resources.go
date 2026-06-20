@@ -25,19 +25,19 @@ func ApplyCellResources(cell Cell) error {
 	}
 
 	if cell.RAMMB > 0 {
-		if err := os.WriteFile(filepath.Join(cellGroup, "memory.max"), []byte(fmt.Sprintf("%d", cell.RAMMB*1024*1024)), 0644); err != nil {
+		if err := writeCgroupFile(filepath.Join(cellGroup, "memory.max"), fmt.Sprintf("%d", cell.RAMMB*1024*1024)); err != nil {
 			return err
 		}
 	}
 
 	if cell.CPUMilli > 0 {
 		quota := cell.CPUMilli * 1000
-		if err := os.WriteFile(filepath.Join(cellGroup, "cpu.max"), []byte(fmt.Sprintf("%d 100000", quota)), 0644); err != nil {
+		if err := writeCgroupFile(filepath.Join(cellGroup, "cpu.max"), fmt.Sprintf("%d 100000", quota)); err != nil {
 			return err
 		}
 	}
 
-	return os.WriteFile(filepath.Join(cellGroup, "cgroup.procs"), []byte(fmt.Sprintf("%d", cell.PID)), 0644)
+	return writeCgroupFile(filepath.Join(cellGroup, "cgroup.procs"), fmt.Sprintf("%d", cell.PID))
 }
 
 func RemoveCellResources(cell Cell) {
@@ -45,4 +45,17 @@ func RemoveCellResources(cell Cell) {
 		return
 	}
 	_ = os.Remove(filepath.Join("/sys/fs/cgroup", "sparkd", cell.Name))
+}
+
+func writeCgroupFile(path, value string) error {
+	f, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open cgroup file %s: %w", path, err)
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(value); err != nil {
+		return fmt.Errorf("write cgroup file %s: %w", path, err)
+	}
+	return nil
 }
